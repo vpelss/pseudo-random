@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  
+  
+  
+
+  <title>pseudo random</title>
+
+    <link rel="canonical" href="https://codepen.io/vpelss/pen/OJYbBYN">
+  
+  
+  
+  
+<style>
+body{
+  font-family: "courier" 
+}
+</style>
+
+  
+  
+  
+</head>
+
+<body>
+  <!--
+https://en.wikipedia.org/wiki/Cellular_automaton
+
+https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/
+multiply a number repeatedly by 3 , keep 31 rightmost digits
+repetition period?
+
+strange loops?
+
+fundtion(){
+#run for time less than period 
+reseed with time or another number that mixes up next run?
+}
+
+Monte Carlo Value for Pi 
+
+primes?
+
+<a href="https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/" target="blank">https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/</a>
+
+-->
+
+<div id='output'>
+
+</div>
+  
+      <script id="rendered-js" >
+//webworker
+
+//rough random based on ca rule 30?
+var ca = (function () {
+  //rule , width , seed line
+  //persistant states
+  let rule_number_dec;
+  let rule_patterns = {};
+  let ca_line_str;
+  let ca_line_str_new = "";
+
+  let ca_line_width;
+
+  return function (rule, width, seed) {
+    //initialization
+    if (rule) {
+      //rules 0 to 255 (8 bits) : each bit maps to a 3 bit pattern (0 to 7 dec) and determines the output bit in our ca_line
+      //convert dec rule into the rule pattern hash to give our 1 or 0
+      //rule_patterns will only have a value 1 and undefined (not set) for those of value 0
+      rule_number_dec = rule;
+      let count = 0;
+      let three_bits;
+      let temp_rule = rule_number_dec;
+      for (let count = 0; count <= 7; count++) {
+        three_bits = count.toString(2).padStart(3, "0");
+        if (temp_rule & 1) {
+          rule_patterns[three_bits] = "1";
+        } else {
+          rule_patterns[three_bits] = "0";
+        }
+        temp_rule = temp_rule >> 1;
+      }
+    }
+    width ? (ca_line_width = width) : null;
+    seed ? (ca_line_str = seed) : null;
+    //get next random output
+    if (
+      typeof rule == "undefined" &&
+      typeof width == "undefined" &&
+      typeof seed == "undefined"
+    ) {
+      //first char
+      let three_bit_str = ca_line_str.substr(-1, 1) + ca_line_str.substr(0, 2);
+      ca_line_str_new = rule_patterns[three_bit_str];
+      //loop
+      let ca_length = ca_line_str.length;
+      for (let n = 0; n < ca_length - 2; n++) {
+        three_bit_str = ca_line_str.substr(n, 3);
+        ca_line_str_new = ca_line_str_new + rule_patterns[three_bit_str];
+      }
+      //last char
+      three_bit_str = ca_line_str.substr(-2, 2) + ca_line_str.substr(0, 1);
+      ca_line_str_new = ca_line_str_new + rule_patterns[three_bit_str];
+      ca_line_str = ca_line_str_new;
+      return ca_line_str;
+    }
+  };
+})();
+
+start = "000011111110100011001111111111110000010110000000011001111111100000000001";
+//document.getElementById("output").innerHTML = start;
+h = ca(30, null, start);
+for (let a = 0; a < 100; a++) {
+  op = ca();
+  op = op.substr(1,1);
+  document.getElementById("output").innerHTML =
+    document.getElementById("output").innerHTML + "" + op;
+}
+document.getElementById("output").innerHTML =
+  document.getElementById("output").innerHTML + "<br>";
+
+//rough random based on simple multiplication
+var random_times = (function () {
+  //seed,multiplier,width
+  //persistant states
+  let state;
+  let multiplier;
+  let length;
+  return function (seed, mult, len) {
+    //initialization
+    seed ? (state = BigInt(seed)) : null;
+    mult ? (multiplier = BigInt(mult)) : null;
+    len ? (length = len) : null;
+    //get next random output
+    if (
+      typeof seed == "undefined" &&
+      typeof mult == "undefined" &&
+      typeof len == "undefined"
+    ) {
+      state = state * multiplier;
+      let text = state.toString();
+      let result = text.slice(-length);
+      return result;
+    }
+  };
+})();
+
+random_times(13, 3, 3);
+//random_times(null,null,20);
+for (let a = 0; a < 10; a++) {
+  //test = Number(random_times());
+  //test = Number(random_times()).toString(2);
+  //test = decimalToBinary( random_times() );
+  // test = decimalToBinary( Number(random_times()) );
+  test = random_times();
+  //document.getElementById("output").innerHTML = document.getElementById("output").innerHTML + test + "</br>";
+}
+
+function decimalToBinary(N) {
+  let oldn = N;
+  N = Number(N);
+  if (N < 0) {
+    h = 9;
+  }
+  if (N === 0) return "0";
+  let binaryArray = [];
+  while (N > 0) {
+    binaryArray.push(N & 1);
+    N = N >> 1;
+  }
+  return binaryArray.reverse().join("");
+}
+    </script>
+
+  
+</body>
+
+</html>
