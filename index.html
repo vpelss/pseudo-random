@@ -8,7 +8,7 @@
   
   
 
-  <title>pseudo random</title>
+  <title>pseudo random ca rule 30</title>
 
     <link rel="canonical" href="https://codepen.io/vpelss/pen/OJYbBYN">
   
@@ -28,77 +28,162 @@ body{
 
 <body>
   <!--
+mathimatica uses ca width of a few hundred
+Test needs 1000000 ones and zeros. ca passes https://mzsoltmolnar.github.io/random-bitstream-tester/
+https://gchq.github.io/CyberChef/#recipe=From_Binary('Space',8)Entropy('Shannon%20scale')&ieol=CRLF&oeol=VT
+
+https://www.wolframscience.com/nks/p315--the-intrinsic-generation-of-randomness/
 https://en.wikipedia.org/wiki/Cellular_automaton
-
-https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/
-multiply a number repeatedly by 3 , keep 31 rightmost digits
-repetition period?
-
-strange loops?
-
-fundtion(){
-#run for time less than period 
-reseed with time or another number that mixes up next run?
-}
-
-Monte Carlo Value for Pi 
-
-primes?
-
-<a href="https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/" target="blank">https://www.wolframscience.com/nks/p319--the-intrinsic-generation-of-randomness/</a>
-
 -->
+<p>
+  <a href="https://www.wolframscience.com/nks/p315--the-intrinsic-generation-of-randomness/" target="blank">https://www.wolframscience.com/nks/p315--the-intrinsic-generation-of-randomness/</a>
+</p>
+<label for="how_many">How many bits:</label>
+<input id="how_many" name="how_many" type="text" value="100">
+<input id="gogogo" type="button" value="Go Go Go">
+<button onclick="copyContent()">Copy To Clipboard</button>
+
+<div id='message'>
+</div>
 
 <div id='output'>
-
 </div>
-  
-      <script id="rendered-js" >
-//webworker
 
-//rough random based on ca rule 30?
+<script id="webworker" _type="javascript/worker">
+  onmessage = function(event) {
+    var input = event.data;
+    let rule = input.rule
+    let seed = input.seed;
+    let op = ca(rule,seed);
+    postMessage(op);
+  };
+
+  //random number generatorbased on ca rule 30?
 var ca = (function () {
-  //rule , width , seed line
-  //persistant states
-  let rule_number_dec;
+  //if called with (rule,seed) then we are initializing the CA
+  //if not, we are requesting the next line of the CA
+  //persistant states here
   let rule_patterns = {};
   let ca_line_str;
-  let ca_line_str_new = "";
 
-  let ca_line_width;
-
-  return function (rule, width, seed) {
-    //initialization
+  return function (rule, seed) {
+    let rule_number_dec;
+    let ca_line_str_new = "";
+    //initialization. wolfram 255 rule : seed is a string of 1 and 0 and is effectivly the first line in the CA
     if (rule) {
-      //rules 0 to 255 (8 bits) : each bit maps to a 3 bit pattern (0 to 7 dec) and determines the output bit in our ca_line
-      //convert dec rule into the rule pattern hash to give our 1 or 0
-      //rule_patterns will only have a value 1 and undefined (not set) for those of value 0
-      rule_number_dec = rule;
+      //calculate rule_patterns["010"] = 1 | 0
+      //rules are dec 0 to 255 (8 bits) : each bit position maps to a 3 bit pattern (0 to 7 dec right to left) and when matched in ca_line_str determines the center output bit in ca_line_str_new
+      //convert dec rule into rule_patterns hash to determine our 1 or 0
       let count = 0;
       let three_bits;
-      let temp_rule = rule_number_dec;
       for (let count = 0; count <= 7; count++) {
         three_bits = count.toString(2).padStart(3, "0");
-        if (temp_rule & 1) {
+        if (rule & 1) {
           rule_patterns[three_bits] = "1";
         } else {
           rule_patterns[three_bits] = "0";
         }
-        temp_rule = temp_rule >> 1;
+        rule = rule >> 1;
       }
     }
-    width ? (ca_line_width = width) : null;
     seed ? (ca_line_str = seed) : null;
-    //get next random output
-    if (
-      typeof rule == "undefined" &&
-      typeof width == "undefined" &&
-      typeof seed == "undefined"
-    ) {
+    //OR get next random output
+    if (typeof rule == "undefined" && typeof seed == "undefined") {
       //first char
       let three_bit_str = ca_line_str.substr(-1, 1) + ca_line_str.substr(0, 2);
       ca_line_str_new = rule_patterns[three_bit_str];
-      //loop
+      //loop characters
+      let ca_length = ca_line_str.length;
+      for (let n = 0; n < ca_length - 2; n++) {
+        three_bit_str = ca_line_str.substr(n, 3);
+        ca_line_str_new = ca_line_str_new + rule_patterns[three_bit_str];
+      }
+      //last char
+      three_bit_str = ca_line_str.substr(-2, 2) + ca_line_str.substr(0, 1);
+      ca_line_str_new = ca_line_str_new + rule_patterns[three_bit_str];
+      ca_line_str = ca_line_str_new;
+      return ca_line_str;
+    }
+  };
+})();
+</script>
+  
+      <script id="rendered-js" >
+//should be 32 bits or more. Wolfram says hundreds.
+let start = "100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+let rule = 30;
+let goGoGo_button = document.getElementById("gogogo");
+goGoGo_button.onclick = goGoGo2;
+//goGoGo : webworker
+//goGoGo2 : no webworker
+
+//webworker
+function goGoGo() {
+  line_count = 0;
+  bigString = "";
+  document.getElementById("message").innerHTML = "";
+  document.getElementById("output").innerHTML = "<br>";
+  webworker.postMessage({ rule: rule, seed: start });
+  let how_many = document.getElementById("how_many").value;
+  for (let a = 0; a < how_many; a++) {
+    webworker.postMessage("");
+  }
+  document.getElementById("message").innerHTML =
+    "Done. " + bigString.length + " digits";
+}
+
+//no webworker
+function goGoGo2() {
+  line_count = 0;
+  bigString = "";
+  document.getElementById("message").innerHTML = "";
+  document.getElementById("output").innerHTML = "<br>";
+  ca(rule, start);
+  let how_many = document.getElementById("how_many").value;
+  do {
+    op = ca();
+    op = op.substr(1, 1);
+    bigString = bigString + op;
+  } while (bigString.length < how_many);
+  document.getElementById("output").innerHTML =
+    "Done. " + bigString.length + " digits saved. Click 'Copy To Clipboard'";
+}
+
+//random number generatorbased on ca rule 30?
+var ca = (function () {
+  //if called with (rule,seed) then we are initializing the CA
+  //if not, we are requesting the next line of the CA
+  //persistant states here
+  let rule_patterns = {};
+  let ca_line_str;
+
+  return function (rule, seed) {
+    let rule_number_dec;
+    let ca_line_str_new = "";
+    //initialization. wolfram 255 rule : seed is a string of 1 and 0 and is effectivly the first line in the CA
+    if (rule) {
+      //calculate rule_patterns["010"] = 1 | 0
+      //rules are dec 0 to 255 (8 bits) : each bit position maps to a 3 bit pattern (0 to 7 dec right to left) and when matched in ca_line_str determines the center output bit in ca_line_str_new
+      //convert dec rule into rule_patterns hash to determine our 1 or 0
+      let count = 0;
+      let three_bits;
+      for (let count = 0; count <= 7; count++) {
+        three_bits = count.toString(2).padStart(3, "0");
+        if (rule & 1) {
+          rule_patterns[three_bits] = "1";
+        } else {
+          rule_patterns[three_bits] = "0";
+        }
+        rule = rule >> 1;
+      }
+    }
+    seed ? (ca_line_str = seed) : null;
+    //OR get next random output
+    if (typeof rule == "undefined" && typeof seed == "undefined") {
+      //first char
+      let three_bit_str = ca_line_str.substr(-1, 1) + ca_line_str.substr(0, 2);
+      ca_line_str_new = rule_patterns[three_bit_str];
+      //loop characters
       let ca_length = ca_line_str.length;
       for (let n = 0; n < ca_length - 2; n++) {
         three_bit_str = ca_line_str.substr(n, 3);
@@ -113,69 +198,56 @@ var ca = (function () {
   };
 })();
 
-start = "000011111110100011001111111111110000010110000000011001111111100000000001";
-//document.getElementById("output").innerHTML = start;
-h = ca(30, null, start);
-for (let a = 0; a < 100; a++) {
+//get inline webworker code.
+var inline_webworker_blob = new Blob(
+  [document.querySelector("#webworker").textContent],
+  { type: "text/javascript" }
+);
+let webworker = new Worker(window.URL.createObjectURL(inline_webworker_blob));
+
+let bigString = "";
+let line_count = 0;
+//messages from webworker
+webworker.onmessage = function (event) {
+  let op = event.data;
+  if (typeof op == "undefined") return false;
+  op = op.substr(1, 1);
+  bigString = bigString + op;
+  let div = document.createElement("div");
+  div.style.display = "inline";
+  div.innerHTML = op;
+  document.getElementById("output").appendChild(div);
+  //every 1000 bits
+  line_count++;
+  if (line_count % 1000 == 0) {
+    document.getElementById("message").innerHTML = line_count + " digits";
+    div = document.createElement("br");
+    document.getElementById("output").appendChild(div);
+  }
+};
+
+const copyContent = async () => {
+  try {
+    await navigator.clipboard.writeText(bigString);
+    alert("Content copied to clipboard");
+    console.log("Content copied to clipboard");
+  } catch (err) {
+    console.error("Failed to copy: ", err);
+  }
+};
+
+let op;
+h = ca(rule, start);
+document.getElementById("message").innerHTML = "Below is CA test output only";
+document.getElementById("output").innerHTML = start;
+for (let a = 0; a < 1000; a++) {
   op = ca();
-  op = op.substr(1,1);
+  //op = op.substr(1, 1);
   document.getElementById("output").innerHTML =
-    document.getElementById("output").innerHTML + "" + op;
+    document.getElementById("output").innerHTML + "<br>" + op;
 }
 document.getElementById("output").innerHTML =
   document.getElementById("output").innerHTML + "<br>";
-
-//rough random based on simple multiplication
-var random_times = (function () {
-  //seed,multiplier,width
-  //persistant states
-  let state;
-  let multiplier;
-  let length;
-  return function (seed, mult, len) {
-    //initialization
-    seed ? (state = BigInt(seed)) : null;
-    mult ? (multiplier = BigInt(mult)) : null;
-    len ? (length = len) : null;
-    //get next random output
-    if (
-      typeof seed == "undefined" &&
-      typeof mult == "undefined" &&
-      typeof len == "undefined"
-    ) {
-      state = state * multiplier;
-      let text = state.toString();
-      let result = text.slice(-length);
-      return result;
-    }
-  };
-})();
-
-random_times(13, 3, 3);
-//random_times(null,null,20);
-for (let a = 0; a < 10; a++) {
-  //test = Number(random_times());
-  //test = Number(random_times()).toString(2);
-  //test = decimalToBinary( random_times() );
-  // test = decimalToBinary( Number(random_times()) );
-  test = random_times();
-  //document.getElementById("output").innerHTML = document.getElementById("output").innerHTML + test + "</br>";
-}
-
-function decimalToBinary(N) {
-  let oldn = N;
-  N = Number(N);
-  if (N < 0) {
-    h = 9;
-  }
-  if (N === 0) return "0";
-  let binaryArray = [];
-  while (N > 0) {
-    binaryArray.push(N & 1);
-    N = N >> 1;
-  }
-  return binaryArray.reverse().join("");
-}
     </script>
 
   
